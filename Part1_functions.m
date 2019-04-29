@@ -43,22 +43,6 @@ y1 = y(rand1);
 y2 = y(rand2);
 
 % defining the line using the two point form of a line
-x_plot = 0:2;
-y_plot = ((y2-y1)/(x2-x1))*(x_plot-x1) + y1;
-
-figure(1)
-plot(x_plot,y_plot,'--'), hold on
-
-plot(x,y,'*r')
-xval = [x1, x2];
-yval = [y1, y2];
-plot(xval, yval,'ob'), hold on
-
-m = polyfit(xval,yval, 1);
-x_fit = linspace(x1, x2, 50);
-y_fit = m(1) * x_fit + m(2);
-
-plot(x_fit, y_fit,'-.')
 
 % initialize khat
 Khat = [0 0 1];
@@ -123,12 +107,38 @@ bestLine = bestLine(bestLine ~= 0);
 
 for i = 1:length(bestLine)
     plot(coordinates(1,bestLine(i)),coordinates(2,bestLine(i)),'*')
+
     
     
 end
 
+for i = 1:length(bestLine)
+    coordinates(:,bestLine(i)) = [];
 
-hold off
+
+end
+hold on
+
+
+x_plot = 0:2;
+y_plot = ((y2-y1)/(x2-x1))*(x_plot-x1) + y1;
+
+figure(1)
+plot(x_plot,y_plot,'--'), hold on
+
+plot(x,y,'*r')
+xval = [x1, x2];
+yval = [y1, y2];
+plot(xval, yval,'ob'), hold on
+
+m = polyfit(xval,yval, 1);
+x_fit = linspace(x1, x2, 50);
+y_fit = m(1) * x_fit + m(2);
+
+plot(x_fit, y_fit,'-.')
+
+hold 0ff
+
 % 
 % max_counter = 0;
 % for k=1:10
