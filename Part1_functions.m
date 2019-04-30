@@ -1,8 +1,12 @@
 %% RANSAC 
 % Cleaning the data
 clear
-load('scan4.mat')
+clf
+load('r_and_theta.mat')
+
 c = 1;
+r = r_all(:,1);
+theta = theta_all(:,1);
 for i=1:(length(r))
     if r(i,:) ~= 0
     r_clean(c,:) = r(i,:);
@@ -15,51 +19,62 @@ end
 coordinates(1,:) = r_clean .* cos(deg2rad(theta_clean));
 coordinates(2,:) = r_clean .* sin(deg2rad(theta_clean));
 
-% test plot
-% plot(x,y,'o')
-
-% thresholds for x and y
-threshold = 0.25*(max(coordinates(1,:)));
-
-upper_x_threshold = 1.25*(max(coordinates(1,:)));
-upper_y_threshold = 1.25*(max(coordinates(2,:)));
-lower_x_threshold = 0.75*(min(coordinates(1,:)));
-lower_y_threshold = 0.75*(min(coordinates(2,:)));
-
-% defining the random points
-rand1 = randi(length(coordinates(1,:)),1);
-rand2 = randi(length(coordinates(1,:)),1);
-
-if rand1 == rand2
-    rand2 = randi(length(coordinates(1,:)),1);
+leftoverCoordinates = coordinates;
+hold on
+for i = 1:6
+    
+    [m,b,domain,leftoverCoordinates] = ransac(leftoverCoordinates);
+    
+    x_1 = linspace(domain(1),domain(2));
+    y_1 = m*x_1 + b;
+    plot(x_1,y_1)
 end
 
-x = coordinates(1,:);
-y = coordinates(2,:);
+legend('1','2','3','4','5')
 
-x1 = x(rand1);
-x2 = x(rand2);
-y1 = y(rand1);
-y2 = y(rand2);
+% [a,b,c,d] = ransac(coordinates);
+% [e,f,g,h] = ransac(d);
+% [i,j,k,l] = ransac(h);
+% 
+% x_1 = linspace(c(1),c(2));
+% x_2 = linspace(g(1),g(2));
+% x_3 = linspace(k(1),k(2));
+% 
+% y_1 = a*x_1 + b;
+% y_2 = e*x_2 + f;
+% y_3 = i*x_3 + j;
+% 
+% plot(x_1,y_1)
+% plot(x_2,y_2)
+% plot(x_3,y_3)
+
+%plot(coordinates(1,:),coordinates(2,:),'*b')
+
+plot(leftoverCoordinates(1,:),leftoverCoordinates(2,:),'*r')
+
+hold off
+
+
+function [ M, B, domain, remainingCoordinates] = ransac(coordinates)
 
 % defining the line using the two point form of a line
 
 % initialize khat
-Khat = [0 0 1];
-Tvector = [x2-x1 ; y2-y1 ; 1];
-That = Tvector./vecnorm(Tvector);
-Nhat = cross(Khat, That);
+
 
 counter = 0;
 coordinates = [coordinates ;ones(length(coordinates))];
 coordinates = coordinates(1:3,:);
 goodPoints = [];
-goodMatrix = [zeros(length(coordinates(1,:)),10)];
+goodMatrix = [zeros(length(coordinates(1,:)),100)];
+coefficientsMatrix = zeros(3,100);
 
 
-for i=1:10
+for i=1:100
+    
     rand1 = randi(length(coordinates(1,:)),1);
     rand2 = randi(length(coordinates(1,:)),1);
+    
 
     if rand1 == rand2
         rand2 = randi(length(coordinates(1,:)),1);
@@ -73,6 +88,13 @@ for i=1:10
     y1 = y(rand1);
     y2 = y(rand2); 
     
+    Khat = [0 0 1];
+    Tvector = [x2-x1 ; y2-y1 ; 1];
+    That = Tvector./vecnorm(Tvector);
+    Nhat = cross(Khat, That);
+    
+    coefficientsMatrix(:,i) = [x2-x1; y2-y1; 1];
+    
     clear goodPoints 
     goodPoints = [];
     counter = 0;
@@ -81,73 +103,56 @@ for i=1:10
         point = coordinates(:,m);
         pvector = [x1 - point(1) ; y1 - point(2); 1];
         perp_dist = dot(Nhat,pvector);
-        if abs(perp_dist) < 0.01
+        if abs(perp_dist) < 0.001
             counter = counter + 1;
             goodPoints(length(goodPoints) + 1 )= m;
+
+            
             
         end
-        
     end
     goodMatrix (:,i) = [goodPoints zeros(1,length(coordinates(1,:))-length(goodPoints))];
 end
 
-
 for k = length(coordinates(1,:)):-1:1
     if any(goodMatrix(k,:))
         [~,index] = max(goodMatrix(k,:));
+
+        bestCoefficients = coefficientsMatrix(:,index);
         break
-        
-    end
-    
+    end 
 end
 
 bestLine = goodMatrix(:,index);
-
 bestLine = bestLine(bestLine ~= 0);
 
+includedCoordinates = zeros(3,length(bestLine));
 for i = 1:length(bestLine)
-    plot(coordinates(1,bestLine(i)),coordinates(2,bestLine(i)),'*')
-
-    
-    
+    includedCoordinates(:,length(includedCoordinates)+1) = coordinates(:,bestLine(i));
+    coordinates(:,bestLine(i)) = 0;
 end
-
-for i = 1:length(bestLine)
-    coordinates(:,bestLine(i)) = [];
-
-
-end
+coordinates( :, ~any(coordinates,1) ) = [];  %columns
+includedCoordinates( :, ~any(includedCoordinates,1) ) = [];  %columns
 hold on
 
+[~,M,B] = regression(includedCoordinates(1,:),includedCoordinates(2,:));
 
-x_plot = 0:2;
-y_plot = ((y2-y1)/(x2-x1))*(x_plot-x1) + y1;
+remainingCoordinates = coordinates;
 
-figure(1)
-plot(x_plot,y_plot,'--'), hold on
+domain = [min(includedCoordinates(1,:)) max(includedCoordinates(1,:))];
 
-plot(x,y,'*r')
-xval = [x1, x2];
-yval = [y1, y2];
-plot(xval, yval,'ob'), hold on
+standardDev = std(includedCoordinates(1,:));
 
-m = polyfit(xval,yval, 1);
-x_fit = linspace(x1, x2, 50);
-y_fit = m(1) * x_fit + m(2);
+domainCenter = (domain(2)+domain(1))./2;
 
-plot(x_fit, y_fit,'-.')
+domain = [domainCenter - standardDev domainCenter + standardDev];
 
-hold 0ff
+% domain = [prctile(domain,20) prctile(domain,80)];
 
-% 
-% max_counter = 0;
-% for k=1:10
-%     max_counter = zeros(1,10);
-%     for j=1:97
-%         if goodMatrix(j,k) ~= 0
-%             max_counter(1,k) = max_counter(1,k) + 1;
-%         end
-%     end
-% end
-            
+x_fit = linspace(domain(1),domain(2));
+y_fit = M * x_fit + B;
+
+%plot(x_fit,y_fit,'c')
+end
+    
          
