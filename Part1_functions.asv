@@ -2,7 +2,8 @@
 % Cleaning the data
 clear
 clf
-load('r_and_theta.mat')
+%load('r_and_theta.mat')
+load(
 
 c = 1;
 r = r_all(:,1);
@@ -15,14 +16,24 @@ for i=1:(length(r))
     end
 end
 
+
+
 % Computing the cartesian coordinates 
 coordinates(1,:) = r_clean .* cos(deg2rad(theta_clean));
 coordinates(2,:) = r_clean .* sin(deg2rad(theta_clean));
 
+
+
+coordinates(:,coordinates(1,:) > 1.25) = [];
+coordinates(:,coordinates(1,:) < 0) = [];
+coordinates(:,coordinates(2,:) < 0) = [];
+coordinates(:,coordinates(2,:)  > 2) = [];
+
 leftoverCoordinates = coordinates;
 hold on
 plot(coordinates(1,:),coordinates(2,:),'*b')
-while  length(leftoverCoordinates)>30
+% while  length(leftoverCoordinates)>6
+for i = 1:2
     
     [m,b,domain,leftoverCoordinates] = ransac(leftoverCoordinates);
     
@@ -51,6 +62,18 @@ legend('1','2','3','4','5','6','7','8','9','10')
 
 
 plot(leftoverCoordinates(1,:),leftoverCoordinates(2,:),'*r')
+
+axis([-.5 2 -.5 2.5])
+
+
+walls_x = [-.25 1.6 1.6 -.25 -.25];
+walls_y = [-.25 -.25 2.25 2.25 -.25];
+
+plot(walls_x,walls_y,'m','lineWidth',5)
+
+
+
+plot(median(leftoverCoordinates(1,:)),median(leftoverCoordinates(2,:)),'*','lineWidth',20)
 
 
 hold off
