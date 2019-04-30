@@ -5,8 +5,8 @@ clf
 load('r_and_theta.mat')
 
 c = 1;
-r = r_all(:,1);
-theta = theta_all(:,1);
+r = r_all(:,2);
+theta = theta_all(:,2);
 for i=1:(length(r))
     if r(i,:) ~= 0
     r_clean(c,:) = r(i,:);
@@ -21,16 +21,17 @@ coordinates(2,:) = r_clean .* sin(deg2rad(theta_clean));
 
 leftoverCoordinates = coordinates;
 hold on
-for i = 1:6
+plot(coordinates(1,:),coordinates(2,:),'*b')
+while  length(leftoverCoordinates)>30
     
     [m,b,domain,leftoverCoordinates] = ransac(leftoverCoordinates);
     
     x_1 = linspace(domain(1),domain(2));
     y_1 = m*x_1 + b;
-    plot(x_1,y_1)
+    plot(x_1,y_1,'lineWidth',5)
 end
 
-legend('1','2','3','4','5')
+legend('1','2','3','4','5','6','7','8','9','10')
 
 % [a,b,c,d] = ransac(coordinates);
 % [e,f,g,h] = ransac(d);
@@ -48,9 +49,9 @@ legend('1','2','3','4','5')
 % plot(x_2,y_2)
 % plot(x_3,y_3)
 
-%plot(coordinates(1,:),coordinates(2,:),'*b')
 
 plot(leftoverCoordinates(1,:),leftoverCoordinates(2,:),'*r')
+
 
 hold off
 
@@ -103,7 +104,8 @@ for i=1:100
         point = coordinates(:,m);
         pvector = [x1 - point(1) ; y1 - point(2); 1];
         perp_dist = dot(Nhat,pvector);
-        if abs(perp_dist) < 0.001
+        parr_dist = dot(That,pvector);
+        if abs(perp_dist) < 0.001 && abs(parr_dist) < 1
             counter = counter + 1;
             goodPoints(length(goodPoints) + 1 )= m;
 
@@ -130,6 +132,7 @@ includedCoordinates = zeros(3,length(bestLine));
 for i = 1:length(bestLine)
     includedCoordinates(:,length(includedCoordinates)+1) = coordinates(:,bestLine(i));
     coordinates(:,bestLine(i)) = 0;
+    
 end
 coordinates( :, ~any(coordinates,1) ) = [];  %columns
 includedCoordinates( :, ~any(includedCoordinates,1) ) = [];  %columns
@@ -139,18 +142,20 @@ hold on
 
 remainingCoordinates = coordinates;
 
-domain = [min(includedCoordinates(1,:)) max(includedCoordinates(1,:))];
+%domain = [min(includedCoordinates(1,:)) max(includedCoordinates(1,:))];
 
 standardDev = std(includedCoordinates(1,:));
 
-domainCenter = (domain(2)+domain(1))./2;
+domainCenter = mean(includedCoordinates(1,:));
 
 domain = [domainCenter - standardDev domainCenter + standardDev];
 
+
+
 % domain = [prctile(domain,20) prctile(domain,80)];
 
-x_fit = linspace(domain(1),domain(2));
-y_fit = M * x_fit + B;
+% x_fit = linspace(domain(1),domain(2));
+% y_fit = M * x_fit + B;
 
 %plot(x_fit,y_fit,'c')
 end
