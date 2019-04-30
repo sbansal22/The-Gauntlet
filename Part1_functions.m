@@ -5,8 +5,8 @@ clf
 load('r_and_theta.mat')
 
 c = 1;
-r = r_all(:,2);
-theta = theta_all(:,2);
+r = r_all(:,1);
+theta = theta_all(:,1);
 for i=1:(length(r))
     if r(i,:) ~= 0
     r_clean(c,:) = r(i,:);
@@ -15,6 +15,8 @@ for i=1:(length(r))
     end
 end
 
+
+
 % Computing the cartesian coordinates 
 coordinates(1,:) = r_clean .* cos(deg2rad(theta_clean));
 coordinates(2,:) = r_clean .* sin(deg2rad(theta_clean));
@@ -22,7 +24,7 @@ coordinates(2,:) = r_clean .* sin(deg2rad(theta_clean));
 leftoverCoordinates = coordinates;
 hold on
 plot(coordinates(1,:),coordinates(2,:),'*b')
-while  length(leftoverCoordinates)>30
+while  length(leftoverCoordinates)>40
     
     [m,b,domain,leftoverCoordinates] = ransac(leftoverCoordinates);
     
