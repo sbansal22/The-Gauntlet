@@ -47,12 +47,12 @@ for i = 1:2
     
     
     
-    x_1 = linspace(DOMAIN(1),DOMAIN(2));
+    x_1 = linspace(DOMAIN(1,i),DOMAIN(2,i));
     y_1 = M(i)*x_1 + B(i);
     plot(x_1,y_1,'lineWidth',5)
 end
 
-legend('1','2','3','4','5','6','7','8','9','10')
+
 
 % [a,b,c,d] = ransac(coordinates);
 % [e,f,g,h] = ransac(d);
@@ -88,6 +88,10 @@ plot(walls_x,walls_y,'m','lineWidth',5)
 plot(median(leftoverCoordinates(1,:)),median(leftoverCoordinates(2,:)),'*','lineWidth',20)
 
 
+title('Map of Gauntlet with RANSAC walls')
+xlabel('X (Meters)')
+ylabel('Y (Meters)')
+legend('Included Points','Wall 1','Wall 2','Remaining Points','Gauntlet Perimeter','Bucket')
 hold off
 
 end
