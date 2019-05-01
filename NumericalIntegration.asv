@@ -1,0 +1,45 @@
+m = -1.5658;
+b = 2.2329;
+
+domain = [.8391 .97];
+
+
+result = -createLine(m,b,domain ) / 50;
+
+% result = result + createLine(3,0,domain);
+
+result = result + createBucket(1,1);
+
+
+
+
+
+fsurf(result)
+% 
+% axis([-10 10 -10 10 0 1000])
+
+
+
+function [result] = createBucket (x_position,y_position)
+    syms X Y
+
+
+    result = log(sqrt((X - x_position)^2+(Y - y_position)^2));
+
+end
+
+
+
+function [result] = createLine (m,b,domain)
+
+    x = linspace(domain(1),domain(2));
+    syms X Y
+    result = 0;
+
+    for i = 1:100
+        result = result + log(sqrt((X+x(i))^2+(Y+m*x(i)+b)^2));
+    end
+end
+
+
+

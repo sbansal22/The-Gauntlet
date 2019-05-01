@@ -38,10 +38,12 @@ plot(coordinates(1,:),coordinates(2,:),'*b')
 % while  length(leftoverCoordinates)>6
 for i = 1:2
     
-    [m,b,domain,leftoverCoordinates] = ransac(leftoverCoordinates);
+    [M(i),B(i),DOMAIN(:,i),leftoverCoordinates] = ransac(leftoverCoordinates);
     
-    x_1 = linspace(domain(1),domain(2));
-    y_1 = m*x_1 + b;
+    
+    
+    x_1 = linspace(DOMAIN(1),DOMAIN(2));
+    y_1 = M(i)*x_1 + B(i);
     plot(x_1,y_1,'lineWidth',5)
 end
 
