@@ -1,28 +1,23 @@
-data = load('r_and_theta.mat');
+data = load('r_and_theta.mat'); %loading the static scan data of the gauntlet using the LIDAR
 
-[M,B,DOMAIN, circle] = RANSAC(data);
+[M,B,DOMAIN, circle] = RANSAC(data); %runs the RANSAC algorithm to obtain the required line features, line domain, and the bucket shape
 
-result = createGradient(M,B,DOMAIN, circle);
+result = createGradient(M,B,DOMAIN, circle); 
 
+h = fcontour(result); %plots the contour lines for a surface
 
-h = fcontour(result);
-
-h.LevelStep=0.2;
+h.LevelStep=0.2; %Sets the steps for slope levels on the plot
 
 axis([-.25 1.25 -.25 2.25])
 hold on
-
 title('Contour Plot of Function')
 xlabel('x')
 ylabel('y')
 
-position = [0; 0];
+position = [0; 0]; %Initializes the position of the NEATO in the global frame of reference
 L0 = 0.05;
 
-current_angle = -pi/2;
-
-
-
+current_angle = -pi/2; %Initializes the heading of the NEATO in the global frame of reference
 
 %Configure ROS
 % pub = rospublisher('/raw_vel');
@@ -60,7 +55,7 @@ while 1
     
     current_gradient = double(findGradient(result,position(1),position(2)));
     
-    if norm(current_gradient) > 100
+    if norm(current_gradient) > 100 % Checks if the slope exceeds 100 units
         break
     end
     
@@ -70,7 +65,7 @@ while 1
     
     l = L0 .* delta;
     
-    position = double(position + l .* current_gradient);
+    position = double(position + l .* current_gradient); % computes the new position based on a version of the euler's algorithm
     
     plot(position(1),position(2),'m*')
     
@@ -152,9 +147,9 @@ Functions to do all required actions in the gradient ascent algorithm
 function grad = findGradient(f,c,d)
 
 syms a b X Y
-symgrad = gradient(f);
+symgrad = gradient(f); %computes the gradient matrix of the function f
 
-grad = double(subs(symgrad,[X,Y],[c d]));
+grad = double(subs(symgrad,[X,Y],[c d])); 
 
 
 
@@ -165,46 +160,38 @@ end
 function [result] = createGradient (M,B,DOMAIN, circle)
 
 
-m = M(1);
-b = B(1);
+m = M(1); % Assigning the slope of the line for the first object
+b = B(1); % Assigning the intercept of the line for the first object
 
-domain = DOMAIN(:,1);
+domain = DOMAIN(:,1); % Assings the range in x for the first object
 
+scale_factor1 = 100; % Assigns a scaling factor for the first object
+result = -createLine(m,b,domain ) / scale_factor1; % computes the line and scales it by the factor 
 
-result = -createLine(m,b,domain ) / 100;
+m = M(2); % Assigning the slope of the line for the second object
+b = B(2); % Assigning the intercept of the line for the second object
 
-m = M(2);
-b = B(2);
+domain = DOMAIN(:,2); % Assings the range in x for the second object 
 
-domain = DOMAIN(:,2);
-
-
-result = result + -createLine(m,b,domain ) / 100;
+scale_factor2 = 100; % Assigns a scaling factor for the second object
+result = result + -createLine(m,b,domain ) / scale_factor2; % computes the line and scales it by the factor 
 
 % result = result + createLine(3,0,domain);
 
 result = result + 5*createBucket(circle(1),circle(2));
 
+fsurf(result) % creates a surface plot of the objects and the bucket
 
-
-
-
-fsurf(result)
-% 
 axis([-.25 1.25 -.25 2.25 -10 10])
 
 figure
-
-
-
 end
 
 function [result] = createBucket (x_position,y_position)
+    
     syms X Y
 
-
     result = log(sqrt((X - x_position)^2+(Y - y_position)^2));
-
 end
 
 
@@ -237,16 +224,9 @@ for i=1:(length(r))
     end
 end
 
-
-
-
-
 % Computing the cartesian coordinates 
 coordinates(1,:) = data.r_clean .* cos(deg2rad(data.theta_clean));
 coordinates(2,:) = data.r_clean .* sin(deg2rad(data.theta_clean));
-
-
-
 
 coordinates(:,coordinates(1,:) > 1.25) = [];
 coordinates(:,coordinates(1,:) < 0) = [];
@@ -261,14 +241,12 @@ for i = 1:2
     
     [M(i),B(i),DOMAIN(:,i),leftoverCoordinates] = ransac(leftoverCoordinates);
     
-    
-    
     x_1 = linspace(DOMAIN(1),DOMAIN(2));
     y_1 = M(i)*x_1 + B(i);
     plot(x_1,y_1,'lineWidth',5)
 end
 
-legend('1','2','3','4','5','6','7','8','9','10')
+legend('1','2','3','4','5','6','7','8')
 
 % [a,b,c,d] = ransac(coordinates);
 % [e,f,g,h] = ransac(d);
@@ -286,11 +264,9 @@ legend('1','2','3','4','5','6','7','8','9','10')
 % plot(x_2,y_2)
 % plot(x_3,y_3)
 
-
 plot(leftoverCoordinates(1,:),leftoverCoordinates(2,:),'*r')
 
 axis([-.5 2 -.5 2.5])
-
 
 walls_x = [-.25 1.6 1.6 -.25 -.25];
 walls_y = [-.25 -.25 2.25 2.25 -.25];
@@ -316,37 +292,34 @@ function [ M, B, domain, remainingCoordinates] = ransac(coordinates)
 
 % initialize khat
 
-
 counter = 0;
 coordinates = [coordinates ;ones(length(coordinates))];
 coordinates = coordinates(1:3,:);
-goodPoints = [];
-goodMatrix = [zeros(length(coordinates(1,:)),100)];
+goodPoints = []; % initializes a matrix to add the 'inliers' from RANSAC
+goodMatrix = zeros(length(coordinates(1,:)),100); % initializes the matrix to add the compelete line for an object
 coefficientsMatrix = zeros(3,100);
-
 
 for i=1:100
     
-    rand1 = randi(length(coordinates(1,:)),1);
-    rand2 = randi(length(coordinates(1,:)),1);
-    
-
+    rand1 = randi(length(coordinates(1,:)),1); % picks a random integer for the first RANSAC argument
+    rand2 = randi(length(coordinates(1,:)),1); % picks a random integer for the second RANSAC argument
+ 
     if rand1 == rand2
-        rand2 = randi(length(coordinates(1,:)),1);
+        rand2 = randi(length(coordinates(1,:)),1); % Tries to make sure that the first and the second arguments are not the same
     end
 
-    x = coordinates(1,:);
+    x = coordinates(1,:); 
     y = coordinates(2,:);
 
-    x1 = x(rand1);
-    x2 = x(rand2);
-    y1 = y(rand1);
-    y2 = y(rand2); 
+    x1 = x(rand1); % assigns the first x argument using the random index
+    x2 = x(rand2); % assigns the second x argument using the random index
+    y1 = y(rand1); % assigns the first y argument using the random index
+    y2 = y(rand2); % assigns the second y argument using the random index
     
-    Khat = [0 0 1];
-    Tvector = [x2-x1 ; y2-y1 ; 1];
-    That = Tvector./vecnorm(Tvector);
-    Nhat = cross(Khat, That);
+    Khat = [0 0 1]; % initializes a vector 
+    Tvector = [x2-x1 ; y2-y1 ; 1]; % defines the line as a vector
+    That = Tvector./vecnorm(Tvector); % defines a unit vector tangent to the line
+    Nhat = cross(Khat, That); % defines the normal vector as the cross product of K direction and T direction
     
     coefficientsMatrix(:,i) = [x2-x1; y2-y1; 1];
     
@@ -355,32 +328,29 @@ for i=1:100
     counter = 0;
     
     for k=1:length(coordinates(1,:))
-        point = coordinates(:,k);
-        pvector = [x1 - point(1) ; y1 - point(2); 1];
-        perp_dist = dot(Nhat,pvector);
-        parr_dist = dot(That,pvector);
-        if abs(perp_dist) < 0.001 && abs(parr_dist) < 1
+        point = coordinates(:,k); % picks a point on the line
+        pvector = [x1 - point(1) ; y1 - point(2); 1]; % computes the position vector
+        perp_dist = dot(Nhat,pvector); % dot product to compute the magnitude of the perpendicular component
+        parr_dist = dot(That,pvector); % dot product to compute the magnitude of the parallel component
+        if abs(perp_dist) < 0.001 && abs(parr_dist) < 1 % RANSAC thresholds
             counter = counter + 1;
             goodPoints(length(goodPoints) + 1 )= k;
-
-            
-            
         end
     end
-    goodMatrix (:,i) = [goodPoints zeros(1,length(coordinates(1,:))-length(goodPoints))];
+    goodMatrix (:,i) = [goodPoints zeros(1,length(coordinates(1,:))-length(goodPoints))]; % records the inliers
 end
 
-for k = length(coordinates(1,:)):-1:1
-    if any(goodMatrix(k,:))
-        [~,index] = max(goodMatrix(k,:));
+for k = length(coordinates(1,:)):-1:1 % indexes in from end to start
+    if any(goodMatrix(k,:)) % Checks for nonzero elements
+        [~,index] = max(goodMatrix(k,:)); % iterates through good matrix to find the column with maximum inliers
 
-        bestCoefficients = coefficientsMatrix(:,index);
+        bestCoefficients = coefficientsMatrix(:,index); % stores the points for line of best fit
         break
     end 
 end
 
 bestLine = goodMatrix(:,index);
-bestLine = bestLine(bestLine ~= 0);
+bestLine = bestLine(bestLine ~= 0); % removes any remaining null points
 
 includedCoordinates = zeros(3,length(bestLine));
 for i = 1:length(bestLine)
@@ -392,7 +362,7 @@ coordinates( :, ~any(coordinates,1) ) = [];  %columns
 includedCoordinates( :, ~any(includedCoordinates,1) ) = [];  %columns
 hold on
 
-[~,M,B] = regression(includedCoordinates(1,:),includedCoordinates(2,:));
+[~,M,B] = regression(includedCoordinates(1,:),includedCoordinates(2,:)); % performes regression on RANSAC's output (points) to fit a usable line to it.
 
 remainingCoordinates = coordinates;
 
@@ -402,7 +372,7 @@ standardDev = std(includedCoordinates(1,:));
 
 domainCenter = mean(includedCoordinates(1,:));
 
-domain = [domainCenter - standardDev domainCenter + standardDev];
+domain = [domainCenter - standardDev domainCenter + standardDev]; % defines a domain for the function based on the mean and standard deviation
 
 
 
