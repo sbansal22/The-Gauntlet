@@ -1,66 +1,12 @@
+%% RANSAC 
+% Cleaning the data
+
 data = load('r_and_theta.mat');
 
 [M,B,DOMAIN] = RANSAC(data);
 
-gradient = createGradient(M,B,DOMAIN)
-
-function [result] = createGradient (M,B,DOMAIN)
-
-
-m = M(1);
-b = B(1);
-
-domain = DOMAIN(:,1);
-
-
-result = -createLine(m,b,domain ) / 100;
-
-m = M(2);
-b = B(2);
-
-domain = DOMAIN(:,2);
-
-
-result = result + -createLine(m,b,domain ) / 100;
-
-% result = result + createLine(3,0,domain);
-
-result = result + 5*createBucket(1,1.75);
-
-
-
-
-
-fsurf(result)
-% 
-axis([-.25 1.25 -.25 2.25 -10 10])
-% axis([-10 10 -10 10 -10 10])
-
-end
-
-function [result] = createBucket (x_position,y_position)
-    syms X Y
-
-
-    result = log(sqrt((X - x_position)^2+(Y - y_position)^2));
-
-end
-
-
-
-function [result] = createLine (m,b,domain)
-
-    x = linspace(domain(1),domain(2));
-    syms X Y
-    result = 0;
-
-    for i = 1:100
-        result = result + log((sqrt((X-x(i))^2+(Y-(m*x(i)+b))^2)));
-    end
-end
-
-
 function [M,B,DOMAIN] = RANSAC(data)
+clear
 clf
 
 % load('transposedDatasets.mat')
@@ -70,8 +16,8 @@ r = data.r_all(:,1);
 theta = data.theta_all(:,1);
 for i=1:(length(r))
     if r(i,:) ~= 0
-    data.r_clean(c,:) = r(i,:);
-    data.theta_clean(c,:) = theta(i,:);
+    dr_clean(c,:) = r(i,:);
+    theta_clean(c,:) = theta(i,:);
     c = c+1;
     end
 end
@@ -81,8 +27,8 @@ end
 
 
 % Computing the cartesian coordinates 
-coordinates(1,:) = data.r_clean .* cos(deg2rad(data.theta_clean));
-coordinates(2,:) = data.r_clean .* sin(deg2rad(data.theta_clean));
+coordinates(1,:) = r_clean .* cos(deg2rad(theta_clean));
+coordinates(2,:) = r_clean .* sin(deg2rad(theta_clean));
 
 
 
@@ -145,8 +91,6 @@ hold off
 
 end
 
-
-
 function [ M, B, domain, remainingCoordinates] = ransac(coordinates)
 
 % defining the line using the two point form of a line
@@ -191,14 +135,14 @@ for i=1:100
     goodPoints = [];
     counter = 0;
     
-    for k=1:length(coordinates(1,:))
-        point = coordinates(:,k);
+    for m=1:length(coordinates(1,:))
+        point = coordinates(:,m);
         pvector = [x1 - point(1) ; y1 - point(2); 1];
         perp_dist = dot(Nhat,pvector);
         parr_dist = dot(That,pvector);
         if abs(perp_dist) < 0.001 && abs(parr_dist) < 1
             counter = counter + 1;
-            goodPoints(length(goodPoints) + 1 )= k;
+            goodPoints(length(goodPoints) + 1 )= m;
 
             
             
@@ -250,6 +194,5 @@ domain = [domainCenter - standardDev domainCenter + standardDev];
 
 %plot(x_fit,y_fit,'c')
 end
-
-
-
+    
+         

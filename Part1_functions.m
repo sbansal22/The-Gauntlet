@@ -1,17 +1,22 @@
 %% RANSAC 
 % Cleaning the data
-clear
+
+data = load('r_and_theta.mat');
+
+[M,B,DOMAIN] = RANSAC(data);
+
+function [M,B,DOMAIN] = RANSAC(data)
 clf
-load('r_and_theta.mat')
+
 % load('transposedDatasets.mat')
 
 c = 1;
-r = r_all(:,1);
-theta = theta_all(:,1);
+r = data.r_all(:,1);
+theta = data.theta_all(:,1);
 for i=1:(length(r))
     if r(i,:) ~= 0
-    r_clean(c,:) = r(i,:);
-    theta_clean(c,:) = theta(i,:);
+    data.r_clean(c,:) = r(i,:);
+    data.theta_clean(c,:) = theta(i,:);
     c = c+1;
     end
 end
@@ -21,8 +26,8 @@ end
 
 
 % Computing the cartesian coordinates 
-coordinates(1,:) = r_clean .* cos(deg2rad(theta_clean));
-coordinates(2,:) = r_clean .* sin(deg2rad(theta_clean));
+coordinates(1,:) = data.r_clean .* cos(deg2rad(data.theta_clean));
+coordinates(2,:) = data.r_clean .* sin(deg2rad(data.theta_clean));
 
 
 
@@ -78,11 +83,14 @@ plot(walls_x,walls_y,'m','lineWidth',5)
 
 
 
+
+
 plot(median(leftoverCoordinates(1,:)),median(leftoverCoordinates(2,:)),'*','lineWidth',20)
 
 
 hold off
 
+end
 
 function [ M, B, domain, remainingCoordinates] = ransac(coordinates)
 
