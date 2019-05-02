@@ -1,6 +1,70 @@
-data = load('r_and_theta.mat'); %loading the static scan data of the gauntlet using the LIDAR
+clear
 
-[M,B,DOMAIN, circle] = RANSAC(data); %runs the RANSAC algorithm to obtain the required line features, line domain, and the bucket shape
+sub = rossubscriber('/stable_scan');
+
+% Collect data at the room origin
+scan_message = receive(sub);
+r = scan_message.Ranges(1:end-1);
+theta = [0:359]';
+
+
+% data = load('r_and_theta.mat'); %loading the static scan data of the gauntlet using the LIDAR
+
+
+
+c = 1;
+% r = data.r_all(:,1);
+% theta = data.theta_all(:,1);
+for i=1:(length(r))
+    if r(i,:) ~= 0
+    r_clean(c,:) = r(i,:);
+    theta_clean(c,:) = theta(i,:);
+    c = c+1;
+    end
+end
+
+% Computing the cartesian coordinates 
+coordinates(1,:) = r_clean .* cos(deg2rad(theta_clean));
+coordinates(2,:) = r_clean .* sin(deg2rad(theta_clean));
+coordinates = [coordinates ;ones(length(coordinates))];
+coordinates = coordinates(1:3,:);
+
+
+
+
+
+
+
+angle = 0;
+
+r_matrix = [cos(angle) -sin(angle) 0; sin(angle) cos(angle) 0; 0 0 1];
+
+
+
+x = 0;
+y = 0;
+
+T = [1 0 x; 0 1 y; 0 0 1];
+
+
+
+
+    
+    
+coordinates = (r_matrix^-1 * T^-1 * coordinates)';
+
+coordinates = coordinates';
+
+
+
+
+
+
+
+
+
+
+[M,B,DOMAIN, circle] = RANSAC(coordinates); %runs the RANSAC algorithm to obtain the required line features, line domain, and the bucket shape
 
 result = createGradient(M,B,DOMAIN, circle); 
 
@@ -14,14 +78,16 @@ title('Contour Plot of Function')
 xlabel('x')
 ylabel('y')
 
+
+
 position = [0; 0]; %Initializes the position of the NEATO in the global frame of reference
 L0 = 0.05;
 
-current_angle = -pi/2; %Initializes the heading of the NEATO in the global frame of reference
+current_angle = 0; %Initializes the heading of the NEATO in the global frame of reference
 
 %Configure ROS
-% pub = rospublisher('/raw_vel');
-% msg = rosmessage(pub);
+pub = rospublisher('/raw_vel');
+msg = rosmessage(pub);
 
 %Set wheel distance
 d = .2413;
@@ -73,33 +139,33 @@ while 1
     
     
     
-%     distance = L0;
-%     current_angle = atan((position(2)-old_position(2))/(position(1)-old_position(1)));
-%     
-%     angle_change = current_angle - old_angle;
-%     
-%     wa = .5;
-%     
-%     vl = -wa*d/2;
-%     vr = wa*d/2;
-%     msg.Data = [vl,vr];
-%     send(pub, msg);
-%     pause(angle_change/wa)
-%     
-%     msg.Data = [0, 0];
-%     send(pub, msg);
-%     
-%     
-%     va = .1;
-%     
-%     vl = va;
-%     vr = va;
-%     msg.Data = [vl,vr];
-%     send(pub, msg);
-%     pause(.1524)
-%     
-%     msg.Data = [0, 0];
-%     send(pub, msg);
+     distance = L0;
+     current_angle = atan((position(2)-old_position(2))/(position(1)-old_position(1)));
+    
+    angle_change = current_angle - old_angle;
+    
+    wa = .1;
+    
+    vl = -wa*d/2;
+    vr = wa*d/2;
+    msg.Data = [vl,vr];
+    send(pub, msg);
+    pause(angle_change/wa)
+    
+    msg.Data = [0, 0];
+    send(pub, msg);
+    
+    
+    va = .1;
+    
+    vl = va;
+    vr = va;
+    msg.Data = [vl,vr];
+    send(pub, msg);
+    pause(.5)
+    
+    msg.Data = [0, 0];
+    send(pub, msg);
     
     
     
@@ -124,8 +190,8 @@ while 1
 %     pause(.0762*2)
 end
 
-% msg.Data = [0, 0];
-% send(pub, msg);
+msg.Data = [0, 0];
+send(pub, msg);
 
 
 
@@ -213,25 +279,12 @@ function [result] = createLine (m,b,domain)
 end
 
 
-function [M,B,DOMAIN, circle] = RANSAC(data)
+function [M,B,DOMAIN, circle] = RANSAC(coordinates)
 
 
 % load('transposedDatasets.mat')
 
-c = 1;
-r = data.r_all(:,1);
-theta = data.theta_all(:,1);
-for i=1:(length(r))
-    if r(i,:) ~= 0
-    data.r_clean(c,:) = r(i,:);
-    data.theta_clean(c,:) = theta(i,:);
-    c = c+1;
-    end
-end
 
-% Computing the cartesian coordinates 
-coordinates(1,:) = data.r_clean .* cos(deg2rad(data.theta_clean));
-coordinates(2,:) = data.r_clean .* sin(deg2rad(data.theta_clean));
 
 coordinates(:,coordinates(1,:) > 1.25) = [];
 coordinates(:,coordinates(1,:) < 0) = [];
@@ -251,7 +304,7 @@ for i = 1:2
     plot(x_1,y_1,'lineWidth',5)
 end
 
-legend('1','2','3','4','5','6','7','8')
+% legend('1','2','3','4','5','6','7','8')
 
 % [a,b,c,d] = ransac(coordinates);
 % [e,f,g,h] = ransac(d);
@@ -298,8 +351,6 @@ function [ M, B, domain, remainingCoordinates] = ransac(coordinates)
 % initialize khat
 
 counter = 0;
-coordinates = [coordinates ;ones(length(coordinates))];
-coordinates = coordinates(1:3,:);
 goodPoints = []; % initializes a matrix to add the 'inliers' from RANSAC
 goodMatrix = zeros(length(coordinates(1,:)),100); % initializes the matrix to add the compelete line for an object
 coefficientsMatrix = zeros(3,100);
@@ -361,7 +412,7 @@ includedCoordinates = zeros(3,length(bestLine));
 for i = 1:length(bestLine)
     includedCoordinates(:,length(includedCoordinates)+1) = coordinates(:,bestLine(i));
     coordinates(:,bestLine(i)) = 0;
-    
+
 end
 coordinates( :, ~any(coordinates,1) ) = [];  %columns
 includedCoordinates( :, ~any(includedCoordinates,1) ) = [];  %columns
@@ -377,7 +428,7 @@ standardDev = std(includedCoordinates(1,:));
 
 domainCenter = mean(includedCoordinates(1,:));
 
-domain = [domainCenter - standardDev domainCenter + standardDev]; % defines a domain for the function based on the mean and standard deviation
+domain = [domainCenter - 2*standardDev domainCenter + 2*standardDev]; % defines a domain for the function based on the mean and standard deviation
 
 
 
